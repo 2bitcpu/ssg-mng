@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>コンテンツ検索（POST /service/content/search）</title>
+  <link rel="stylesheet" href="css/search.css?1" />
+</head>
+<body>
+  <h1>コンテンツ検索（POST）</h1>
+  <!-- 検索フォーム -->
+  <form id="searchForm">
+    <!-- 🔽 管理者検索切り替えチェックボックス -->
+    <label style="display:block; margin-bottom:8px">
+      <input type="checkbox" id="adminSearch" /> 管理者用検索（/service/manage/content/search） </label>
+    <label>
+      <strong>フリーワード</strong>
+      <input type="text" name="word" placeholder="タイトル・本文を検索" />
+    </label>
+    <div class="row">
+      <label>
+        <strong>draft</strong>
+        <div class="select-wrapper">
+          <select name="draft">
+            <option value="">未指定</option>
+            <option value="true">下書き</option>
+            <option value="false">公開</option>
+          </select>
+        </div>
+      </label>
+      <label>
+        <span>page</span>
+        <input type="number" name="page" min="1" value="1" />
+      </label>
+      <label>
+        <span>per_page</span>
+        <input type="number" name="per_page" min="1" value="10" />
+      </label>
+    </div>
+    <div class="row">
+      <label>
+        <span>date_from</span>
+        <input type="datetime-local" name="date_from" />
+      </label>
+      <label>
+        <span>date_to</span>
+        <input type="datetime-local" name="date_to" />
+      </label>
+    </div>
+    <label>
+      <strong>tags（カンマ区切り）</strong>
+      <input type="text" name="tags" placeholder="tag1, tag2" />
+    </label>
+    <label>
+      <strong>categories（カンマ区切り）</strong>
+      <input type="text" name="categories" placeholder="cat1, cat2" />
+    </label>
+    <div style="display:flex; gap:8px">
+      <button type="submit">検索 (POST)</button>
+      <button type="button" id="clearBtn" class="secondary">クリア</button>
+    </div>
+  </form>
+  <!-- 検索結果 -->
+  <section id="results">
+    <div id="status"></div>
+    <div id="list"></div>
+    <div class="pager" id="pager" style="display:none">
+      <button id="prevBtn" class="secondary">前へ</button>
+      <div id="pageInfo"></div>
+      <button id="nextBtn" class="secondary">次へ</button>
+    </div>
+    <h3>生レスポンス（デバッグ）</h3>
+    <pre id="raw"></pre>
+  </section>
+  <!-- サインイン用ダイアログ -->
+  <dialog id="loginDialog">
+    <form method="dialog" id="loginForm">
+      <h2>Sign in</h2>
+      <label>account <input type="text" name="account" required /></label>
+      <label>password <input type="password" name="password" required /></label>
+      <div style="display:flex; gap:8px; margin-top:8px">
+        <button type="submit">Sign in</button>
+        <button type="button" id="loginCancel">Cancel</button>
+      </div>
+      <p id="loginError" style="color:red"></p>
+    </form>
+  </dialog>
+  <button id="loginBtn" style="position:fixed; top:8px; right:8px;">Sign in</button>
+  <script>
+    (function () {
+      // ------------------------
+      // DOM Elements
+      // ------------------------
+      const listEl = document.getElementById('list');
+      const pager = document.getElementById('pager');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const pageInfo = document.getElementById('pageInfo');
+      const statusEl = document.getElementById('status');
+      const rawEl = document.getElementById('raw');
+      const form = document.getElementById('searchForm');
+      const adminSearch = document.getElementById('adminSearch'); // 管理者チェック
+
+      let authToken = null;
+
+      const loginDialog = document.getElementById('loginDialog');
+      const loginForm = document.getElementById('loginForm');
+      const loginBtn = document.getElementById('loginBtn');
+      const loginCancel = document.getElementById('loginCancel');
+      const loginError = document.getElementById('loginError');
+
+      // ------------------------
+      // ユーティリティ
+      // ------------------------
+      function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+      }
+
+      function toUtcString(localValue) {
+        if (!localValue) return null;
+        // FormData returns File | string | null; ensure string
+        const s = (typeof localValue === 'string') ? localValue : String(localValue);
+        if (!s) return null;
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString();
+      }
+
+      function formatLocal(utcString) {
+        if (!utcString) return '';
+        const d = new Date(utcString);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleString();
+      }
+
+      function isAdminMode() {
+        return !!(adminSearch && adminSearch.checked);
+      }
+
+      // ------------------------
+      // サインインダイアログ
+      // ------------------------
+      if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+          if (loginError) loginError.textContent = '';
+          if (loginDialog && typeof loginDialog.showModal === 'function') {
+            loginDialog.showModal();
+          } else if (loginDialog) {
+            loginDialog.setAttribute('open', 'true');
+          }
+        });
+      }
+
+      if (loginCancel) {
+        loginCancel.addEventListener('click', () => {
+          if (loginDialog && typeof loginDialog.close === 'function') {
+            loginDialog.close();
+          } else if (loginDialog) {
+            loginDialog.removeAttribute('open');
+          }
+        });
+      }
+
+      if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (loginError) loginError.textContent = '';
+
+          const fd = new FormData(loginForm);
+          const body = {
+            account: fd.get('account') ? String(fd.get('account')) : '',
+            password: fd.get('password') ? String(fd.get('password')) : ''
+          };
+
+          try {
+            const resp = await fetch('/service/manage/auth/signin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            if (!resp.ok) {
+              let msg = `HTTP ${resp.status}`;
+              try { const je = await resp.json(); msg += ' ' + (je.error || JSON.stringify(je)); } catch (_) { msg += ' ' + resp.statusText; }
+              throw new Error(msg);
+            }
+            const json = await resp.json();
+            authToken = json.token || null;
+            if (authToken) localStorage.setItem('authToken', authToken);
+            if (loginDialog && typeof loginDialog.close === 'function') loginDialog.close();
+            alert('ログイン成功！');
+          } catch (err) {
+            if (loginError) loginError.textContent = 'ログイン失敗: ' + (err && err.message ? err.message : err);
+          }
+        });
+      }
+
+      // ------------------------
+      // 検索実行
+      // ------------------------
+      async function doSearch() {
+        const savedToken = localStorage.getItem('authToken');
+        if (savedToken) {
+          authToken = savedToken;
+        }
+
+        statusEl.textContent = '検索中…';
+        try {
+          const formData = new FormData(form);
+
+          const draftVal = formData.get('draft');
+          let draft = null;
+          if (draftVal === 'true') draft = true;
+          else if (draftVal === 'false') draft = false;
+
+          const body = {
+            word: formData.get('word') ? String(formData.get('word')) : null,
+            draft,
+            dateFrom: toUtcString(formData.get('date_from')),
+            dateTo: toUtcString(formData.get('date_to')),
+            tags: formData.get('tags') ? String(formData.get('tags')).split(',').map(t => t.trim()).filter(Boolean) : null,
+            categories: formData.get('categories') ? String(formData.get('categories')).split(',').map(t => t.trim()).filter(Boolean) : null,
+            page: parseInt(String(formData.get('page') || '1'), 10) || 1,
+            perPage: parseInt(String(formData.get('per_page') || '10'), 10) || 10
+          };
+
+          const endpoint = isAdminMode() ? '/service/manage/content/search' : '/service/content/search';
+
+          const headers = { 'Content-Type': 'application/json' };
+          if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body)
+          });
+
+          if (!resp.ok) {
+            let msg = `HTTP ${resp.status}`;
+            try { const je = await resp.json(); msg += ' ' + (je.error || JSON.stringify(je)); } catch (_) { msg += ' ' + resp.statusText; }
+            throw new Error(msg);
+          }
+
+          const json = await resp.json();
+          rawEl.textContent = JSON.stringify(json, null, 2);
+          renderResults(json);
+          statusEl.textContent = '';
+        } catch (err) {
+          statusEl.textContent = 'エラー: ' + (err && err.message ? err.message : err);
+        }
+      }
+
+      // ------------------------
+      // 検索結果描画
+      // ------------------------
+      function renderResults(json) {
+        listEl.innerHTML = '';
+
+        const items = Array.isArray(json && json.contents) ? json.contents : [];
+
+        if (!items.length) {
+          listEl.innerHTML = '<div class="card">該当なし</div>';
+          pager.style.display = 'none';
+          return;
+        }
+
+        items.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          // タイトル（matter.title）
+          const titleText = item.matter && item.matter.title ? item.matter.title : '(no title)';
+          const title = document.createElement('div');
+          title.innerHTML = `<strong>${escapeHtml(titleText)}</strong>`;
+          card.appendChild(title);
+
+          // meta: date, draft flag, id
+          const dateText = item.matter && item.matter.date ? formatLocal(item.matter.date) : '';
+          const draftText = (item.matter && item.matter.draft) ? '（draft）' : '';
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          meta.textContent = `${dateText} ${draftText} id: ${item.id}`;
+          card.appendChild(meta);
+
+          // description (safe)
+          if (item.description) {
+            const p = document.createElement('p');
+            p.textContent = String(item.description);
+            card.appendChild(p);
+          }
+
+          // tags / categories
+          const tags = (item.matter && Array.isArray(item.matter.tags)) ? item.matter.tags : [];
+          const categories = (item.matter && Array.isArray(item.matter.categories)) ? item.matter.categories : [];
+          if (tags.length || categories.length) {
+            const extra = document.createElement('div');
+            extra.className = 'meta';
+            const tagsText = tags.length ? `tags: ${tags.map(t => escapeHtml(t)).join(', ')}` : '';
+            const catsText = categories.length ? `categories: ${categories.map(c => escapeHtml(c)).join(', ')}` : '';
+            extra.textContent = [tagsText, catsText].filter(Boolean).join(' | ');
+            card.appendChild(extra);
+          }
+
+          if (isAdminMode()) {
+            // 操作ボタン（削除／編集）
+            const btnWrap = document.createElement('div');
+            btnWrap.style.display = 'flex';
+            btnWrap.style.gap = '8px';
+            btnWrap.style.marginTop = '6px';
+
+            const delBtn = document.createElement('button');
+            delBtn.textContent = '削除';
+            delBtn.style.background = '#dc2626';
+            delBtn.style.color = 'white';
+            delBtn.addEventListener('click', async () => {
+              if (!confirm(`id=${item.id} を削除します。よろしいですか？`)) return;
+              try {
+                const delEndpoint = isAdminMode() ? `/service/manage/content/${item.id}` : `/service/content/${item.id}`;
+                const dh = {};
+                if (authToken) dh['Authorization'] = 'Bearer ' + authToken;
+                const r = await fetch(delEndpoint, { method: 'DELETE', headers: dh });
+                if (!r.ok) {
+                  let msg = `HTTP ${r.status}`;
+                  try { const je = await r.json(); msg += ' ' + (je.error || JSON.stringify(je)); } catch (_) { msg += ' ' + r.statusText; }
+                  throw new Error(msg);
+                }
+                // 再検索
+                doSearch();
+              } catch (err) {
+                alert('削除失敗: ' + (err && err.message ? err.message : err));
+              }
+            });
+            btnWrap.appendChild(delBtn);
+
+            const editBtn = document.createElement('button');
+            editBtn.textContent = '編集';
+            editBtn.style.background = '#f59e0b';
+            editBtn.style.color = 'white';
+            editBtn.addEventListener('click', () => {
+              const url = new URL('/post.html', window.location.origin);
+              url.searchParams.set('id', item.id);
+              window.location.href = url;
+            });
+            btnWrap.appendChild(editBtn);
+
+            card.appendChild(btnWrap);
+          } else {
+            // 一般ユーザー用: 記事ページリンク
+            if (item.matter && item.matter.date) {
+              const d = new Date(item.matter.date);
+              const yymm = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
+              const uuid = item.id;
+              const a = document.createElement('a');
+              a.href = `/${yymm}/${uuid}.html`;
+              a.target = '_view';
+              a.textContent = '記事を開く';
+              a.style.display = 'inline-block';
+              a.style.marginTop = '6px';
+              card.appendChild(a);
+            }
+          }
+
+          listEl.appendChild(card);
+        });
+
+        // ページャ更新
+        const page = json.page || 1;
+        const maxPage = json.maxPage || 1;
+        pageInfo.textContent = `page ${page} / ${maxPage}`;
+        pageInfo.dataset.maxPage = maxPage;
+        pager.style.display = (maxPage > 1) ? 'flex' : 'none';
+        prevBtn.disabled = page <= 1;
+        nextBtn.disabled = page >= maxPage;
+      }
+
+      // ------------------------
+      // イベント登録
+      // ------------------------
+      if (form) {
+        form.addEventListener('submit', e => { e.preventDefault(); doSearch(); });
+      }
+
+      const clearBtn = document.getElementById('clearBtn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          form.reset();
+          listEl.innerHTML = '';
+          pager.style.display = 'none';
+          rawEl.textContent = '';
+          statusEl.textContent = '';
+        });
+      }
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          const pageInput = form.querySelector('input[name="page"]');
+          const cur = parseInt(pageInput.value || '1', 10) || 1;
+          pageInput.value = Math.max(1, cur - 1);
+          doSearch();
+        });
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          const pageInput = form.querySelector('input[name="page"]');
+          const maxPage = parseInt(pageInfo.dataset.maxPage || '1', 10) || 1;
+          const cur = parseInt(pageInput.value || '1', 10) || 1;
+          pageInput.value = Math.min(maxPage, cur + 1);
+          doSearch();
+        });
+      }
+
+      // 初回ロード時に空検索を実行したければここを有効化（コメントアウト中）
+      // doSearch();
+
+    })();
+  </script>
+</body>
+</html>

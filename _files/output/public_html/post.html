@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>コンテンツ投稿テスト</title>
+  <link rel="stylesheet" href="css/post.css?8">
+</head>
+<body>
+  <h1>コンテンツ投稿テスト</h1>
+  <!-- 投稿フォーム -->
+  <form id="postForm">
+    <label><strong>タイトル</strong> <input type="text" id="title"></label>
+    <label><strong>日付</strong> <input type="datetime-local" id="date"></label>
+    <label><strong>下書き</strong> <input type="checkbox" id="draft"></label>
+    <label><strong>タグ</strong> <input type="text" id="tags" placeholder="カンマ区切り"></label>
+    <label><strong>カテゴリ</strong> <input type="text" id="categories" placeholder="カンマ区切り"></label>
+    <label><strong>本文</strong> <textarea id="body"></textarea></label>
+    <div class="button-row" style="display:flex;gap:8px;">
+      <button type="button" id="send-btn">送信</button>
+      <button type="button" id="clear-btn" class="secondary">クリア</button>
+    </div>
+  </form>
+  <h2>レスポンス</h2>
+  <pre id="response-output"></pre>
+  <!-- サインイン用ダイアログ -->
+  <dialog id="loginDialog">
+    <form method="dialog" id="loginForm">
+      <h2>Sign in</h2>
+      <label><strong>account</strong> <input type="text" name="account" required /></label>
+      <label><strong>password</strong> <input type="password" name="password" required /></label>
+      <div class="row" style="margin-top:8px">
+        <button type="submit">Sign in</button>
+        <button type="button" id="loginCancel">Cancel</button>
+      </div>
+      <p id="loginError" style="color:red"></p>
+    </form>
+  </dialog>
+  <button id="loginBtn" style="position:fixed; top:8px; right:8px;">Sign in</button>
+  <script>
+    // ------------------------
+    // DOM Elements
+    // ------------------------
+    const sendBtn = document.getElementById('send-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const output = document.getElementById('response-output');
+    const formFields = ['title', 'draft', 'tags', 'categories', 'body', 'date'];
+    const form = document.getElementById('postForm');
+
+    // ログイン関連
+    let authToken = null;
+    const loginDialog = document.getElementById('loginDialog');
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginCancel = document.getElementById('loginCancel');
+    const loginError = document.getElementById('loginError');
+
+    loginBtn.addEventListener('click', () => {
+      loginError.textContent = '';
+      loginDialog.showModal();
+    });
+    loginCancel.addEventListener('click', () => {
+      loginDialog.close();
+    });
+    loginForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      loginError.textContent = '';
+      const formData = new FormData(loginForm);
+      const body = {
+        account: formData.get('account'),
+        password: formData.get('password')
+      };
+      try {
+        const resp = await fetch('/service/manage/auth/signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const json = await resp.json();
+        authToken = json.token;
+        if (authToken) localStorage.setItem('authToken', authToken);
+
+        loginDialog.close();
+        alert('ログイン成功！');
+      } catch (err) {
+        loginError.textContent = 'ログイン失敗: ' + err;
+      }
+    });
+
+    // ------------------------
+    // URLパラメータからid取得
+    // ------------------------
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    // 編集時：既存データ取得
+    if (id) {
+      const savedToken = localStorage.getItem('authToken');
+      if (savedToken) {
+        authToken = savedToken;
+      }
+
+      fetch(`/service/manage/content/${id}`, {
+        headers: {
+          ...(authToken ? { Authorization: 'Bearer ' + authToken } : {})
+        }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (!data) return;
+          document.getElementById('title').value = data.matter?.title || '';
+          document.getElementById('draft').checked = data.matter?.draft || false;
+          document.getElementById('tags').value = (data.matter?.tags || []).join(',');
+          document.getElementById('categories').value = (data.matter?.categories || []).join(',');
+          document.getElementById('body').value = data.body || '';
+          if (data.matter?.date) {
+            const d = new Date(data.matter.date);
+            const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+            document.getElementById('date').value = local.toISOString().slice(0, 16);
+          }
+        })
+        .catch(e => { console.error(e); alert('データ取得失敗'); });
+    }
+
+    // ------------------------
+    // 送信
+    // ------------------------
+    sendBtn.addEventListener('click', async () => {
+      const title = document.getElementById('title').value;
+      const draft = document.getElementById('draft').checked;
+      const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(Boolean);
+      const categories = document.getElementById('categories').value.split(',').map(c => c.trim()).filter(Boolean);
+      const body = document.getElementById('body').value;
+      const dateStr = document.getElementById('date').value;
+      let isoDate = null;
+      if (dateStr) { const d = new Date(dateStr); if (!isNaN(d)) isoDate = d.toISOString(); }
+
+      const data = { id: id || null, matter: { title, draft, tags, categories, date: isoDate }, body };
+
+      const savedToken = localStorage.getItem('authToken');
+      if (savedToken) {
+        authToken = savedToken;
+      }
+
+      output.textContent = '送信中...';
+      try {
+        const method = id ? 'PUT' : 'POST';
+        const res = await fetch('/service/manage/content', {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { Authorization: 'Bearer ' + authToken } : {})
+          },
+          body: JSON.stringify(data)
+        });
+        const resp = await res.json();
+        output.textContent = JSON.stringify(resp, null, 2);
+      } catch (e) {
+        output.textContent = 'Error: ' + e;
+      }
+    });
+
+    // ------------------------
+    // クリア
+    // ------------------------
+    clearBtn.addEventListener('click', () => {
+      formFields.forEach(f => {
+        const el = document.getElementById(f);
+        if (el.type === 'checkbox') el.checked = false;
+        else el.value = '';
+      });
+      output.textContent = '';
+    });
+  </script>
+</body>
+</html>

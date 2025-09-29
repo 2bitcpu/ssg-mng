@@ -1,0 +1,18 @@
+[package]
+name = "presentation"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+axum.workspace = true
+axum-extra.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+axum-valid.workspace = true
+
+config.workspace = true
+common.workspace = true
+application.workspace = true

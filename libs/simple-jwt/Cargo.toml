@@ -1,0 +1,10 @@
+[package]
+name = "simple-jwt"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chrono = { workspace = true, default-features = false, features = ["now"] }
+jsonwebtoken.workspace = true
+serde.workspace = true
+uuid.workspace = true

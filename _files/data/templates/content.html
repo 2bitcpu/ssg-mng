@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ content.matter.title }}</title>
+  <link rel="stylesheet" href="/css/markdown.css">
+</head>
+<body>
+  <article>
+    <header>
+      <h1>{{ content.matter.title }}</h1>
+      <p>
+        <time datetime="{{ content.matter.date }}"> {{ content.matter.date }} </time> {% if content.matter.draft
+        %}<span>(Draft)</span>{% endif %}
+      </p> {% if content.matter.tags | length > 0 %} <p>Tags: {% for tag in content.matter.tags %} <span>{{ tag
+          }}</span>{% if not loop.last %}, {% endif %} {% endfor %} </p> {% endif %} {% if content.matter.categories |
+      length > 0 %} <p>Categories: {% for cat in content.matter.categories %} <span>{{ cat }}</span>{% if not loop.last
+        %}, {% endif %} {% endfor %} </p> {% endif %}
+    </header>
+    <section class="markdown-body"> {{ content.body | safe }} </section>
+  </article>
+</body>
+</html>

@@ -1,0 +1,24 @@
+[package]
+name = "application"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+serde.workspace = true
+tracing.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+validator.workspace = true
+axum.workspace = true
+axum-extra.workspace = true
+
+config.workspace = true
+common.workspace = true
+domain.workspace = true
+infrastructure.workspace = true
+async-argon2.workspace = true
+simple-jwt.workspace = true
+

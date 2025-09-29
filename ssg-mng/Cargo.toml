@@ -1,0 +1,17 @@
+[package]
+name = "ssg-mng"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+axum.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+presentation.workspace = true
+config.workspace = true
+common.workspace = true
+application.workspace = true
+infrastructure.workspace = true
+domain.workspace = true

@@ -1,0 +1,55 @@
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+resolver = "2"
+members = [ "application", "common","config", "domain", "infrastructure", "presentation", "ssg-mng", "libs/async-argon2", "libs/simple-jwt" ]
+
+[workspace.dependencies]
+lindera-tantivy = { git = "https://github.com/lindera/lindera-tantivy" }
+argon2 = { version = "0.5.3", default-features = false, features = ["alloc", "password-hash", "std"] }
+async-trait = { version = "0.1.89", default-features = false }
+axum = { version = "0.8.4", features = ["macros"] }
+axum-extra = { version = "0.10.1", default-features = false, features = ["typed-header"] }
+chrono = { version = "0.4.42", default-features = false, features = ["serde", "now"] }
+clap = { version = "4.5.48", features = ["derive"] }
+jsonwebtoken = { version = "9.3.1", default-features = false }
+lindera = "1.2.0"
+once_cell = { version = "1.21.3", default-features = false, features = ["std"] }
+password-hash = { version = "0.5.0", default-features = false, features = ["getrandom"] }
+regex = "1.11.3"
+scraper = "0.24.0"
+serde = { version = "1.0.227", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.145", default-features = false, features = ["std"] }
+serde_yaml = { version = "0.9.34", default-features = false }
+tantivy = "0.25.0"
+tempfile = "3.23.0"
+tera = { version = "1.20.0", default-features = false, features = ["chrono"] }
+tokio = { version = "1.47.1", default-features = false, features = ["macros", "rt-multi-thread", "signal", "fs"] }
+tower = { version = "0.5.2", default-features = false, features = ["timeout"] }
+tower-http = { version = "0.6.6", default-features = false, features = ["fs", "cors"] }
+tracing = { version = "0.1.41", default-features = false }
+tracing-subscriber = { version = "0.3.20", default-features = false, features = ["fmt", "env-filter"] }
+uuid = { version = "1.18.1", default-features = false, features = ["v4", "serde"] }
+pulldown-cmark = "0.13.0"
+validator = { version = "0.20.0", default-features = false, features = ["derive"] }
+axum-valid = { version = "0.24.0", default-features = false, features = ["basic", "form", "json", "query", "validator"] }
+
+config = { path = "config" }
+common = { path = "common" }
+domain = { path = "domain" }
+infrastructure = { path = "infrastructure" }
+application = { path = "application" }
+presentation = { path = "presentation" }
+async-argon2 = { path = "libs/async-argon2" }
+simple-jwt = { path = "libs/simple-jwt" }
+# ssg-mng = { path = "ssg-mng" }
+
+[profile.release]
+opt-level = "z"
+debug = false
+lto = true
+strip = true
+codegen-units = 1
+panic = "abort"

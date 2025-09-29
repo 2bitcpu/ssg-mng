@@ -1,0 +1,38 @@
+server:
+  host: "0.0.0.0:3000"
+  cors: []
+  static: "_files/output/public_html"
+
+content:
+  markdown_dir: "_files/output/markdown"
+  html_dir: "_files/output/public_html"
+  title_max_len: 80
+  body_max_len: 30000
+  tag_max_len: 16
+  category_max_len: 16
+  max_tags: 6
+  max_categories: 3
+  template_dir: "_files/data/templates"
+  template_content: "content.html"
+  template_index: "index.html"
+  template_list: "list.html"
+
+search:
+  dictionary_dir: "_files/data/dictionary"
+  index_dir: "_files/output/.index"
+  index_limit: 3000
+  search_limit: 1000
+  memory_budget_in_bytes: 50000000
+
+security:
+#   issuer: "ssg-mng"
+  secret: "550e8400-e29b-41d4-a716-446655440000"
+  expire: 86400
+  user_file: "_files/data/security/user.dat"
+  lock_threshold: 3
+  lock_seconds: 3600
+  update_interval: 1
+  allow_signup: false
+
+log:
+  level: null

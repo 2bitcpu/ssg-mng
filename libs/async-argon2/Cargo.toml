@@ -1,0 +1,9 @@
+[package]
+name = "async-argon2"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+argon2.workspace = true
+password-hash.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"], default-features = false }

@@ -1,0 +1,23 @@
+[package]
+name = "infrastructure"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_yaml.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+async-trait.workspace = true
+tokio.workspace = true
+lindera.workspace = true
+tantivy.workspace = true
+lindera-tantivy.workspace = true
+scraper.workspace = true
+tracing.workspace = true
+pulldown-cmark.workspace = true
+tera.workspace = true
+
+common.workspace = true
+domain.workspace = true
+config.workspace = true
