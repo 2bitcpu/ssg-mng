@@ -143,6 +143,7 @@ impl SearchEngineRepositoryImpl {
         Ok(SchemaFields {
             id: schema.get_field("id")?,
             title: schema.get_field("title")?,
+            description: schema.get_field("description")?,
             body: schema.get_field("body")?,
             draft: schema.get_field("draft")?,
             date: schema.get_field("date")?,
