@@ -11,6 +11,7 @@ use domain::model::{
 pub struct SearchFrontMatterDto {
     pub date: DateTime<Utc>,
     pub title: String,
+    pub description: Option<String>,
     pub draft: bool,
     pub tags: Vec<String>,
     pub categories: Vec<String>,
