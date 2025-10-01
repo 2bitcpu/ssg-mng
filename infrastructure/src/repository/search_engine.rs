@@ -164,7 +164,7 @@ impl SearchEngineRepositoryImpl {
                 .collect::<Vec<_>>()
                 .join(" ");
             let parser =
-                QueryParser::for_index(&self.index, vec![self.fields.title, self.fields.body]);
+                QueryParser::for_index(&self.index, vec![self.fields.title, self.fields.description,self.fields.body]);
             let query = parser.parse_query(&normalize)?;
             queries.push((Occur::Must, query));
         }
