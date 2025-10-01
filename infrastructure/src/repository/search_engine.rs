@@ -31,6 +31,7 @@ use domain::{
 struct SchemaFields {
     pub id: Field,
     pub title: Field,
+    pub description: Field,
     pub body: Field,
     pub draft: Field,
     pub date: Field,
