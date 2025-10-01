@@ -9,6 +9,7 @@ use domain::model::content::{ContentEntity, FrontMatterEntity};
 pub struct FrontMatterDto {
     pub title: Option<String>,
     pub date: Option<DateTime<Utc>>,
+    pub description: Option<String>,
     pub draft: Option<bool>,
     pub tags: Option<Vec<String>>,
     pub categories: Option<Vec<String>>,
