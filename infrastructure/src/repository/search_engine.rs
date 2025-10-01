@@ -101,6 +101,7 @@ impl SearchEngineRepositoryImpl {
 
         let _ = builder.add_text_field("id", full_match_sort.clone());
         let _ = builder.add_text_field("title", token_match.clone());
+        let _ = builder.add_text_field("description", token_match.clone());
         let _ = builder.add_text_field("body", token_match.clone());
         let _ = builder.add_bool_field("draft", STORED | INDEXED);
         let _ = builder.add_date_field("date", STORED | INDEXED | FAST);
