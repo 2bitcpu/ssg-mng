@@ -7,3 +7,4 @@ Cargo.lock
 **/output/.index/
 **/data/dictionary
 **/data/security
+jwt_header.txt
