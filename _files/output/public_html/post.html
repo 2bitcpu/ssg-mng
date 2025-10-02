@@ -10,6 +10,7 @@
   <!-- 投稿フォーム -->
   <form id="postForm">
     <label><strong>タイトル</strong> <input type="text" id="title"></label>
+    <label><strong>概要</strong> <input type="text" id="description"></label>
     <label><strong>日付</strong> <input type="datetime-local" id="date"></label>
     <label><strong>下書き</strong> <input type="checkbox" id="draft"></label>
     <label><strong>タグ</strong> <input type="text" id="tags" placeholder="カンマ区切り"></label>
@@ -43,7 +44,7 @@
     const sendBtn = document.getElementById('send-btn');
     const clearBtn = document.getElementById('clear-btn');
     const output = document.getElementById('response-output');
-    const formFields = ['title', 'draft', 'tags', 'categories', 'body', 'date'];
+    const formFields = ['title', 'description', 'draft', 'tags', 'categories', 'body', 'date'];
     const form = document.getElementById('postForm');
 
     // ログイン関連
@@ -109,6 +110,7 @@
         .then(data => {
           if (!data) return;
           document.getElementById('title').value = data.matter?.title || '';
+          document.getElementById('description').value = data.matter?.description || '';
           document.getElementById('draft').checked = data.matter?.draft || false;
           document.getElementById('tags').value = (data.matter?.tags || []).join(',');
           document.getElementById('categories').value = (data.matter?.categories || []).join(',');
@@ -127,6 +129,7 @@
     // ------------------------
     sendBtn.addEventListener('click', async () => {
       const title = document.getElementById('title').value;
+      const description = document.getElementById('description').value;
       const draft = document.getElementById('draft').checked;
       const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(Boolean);
       const categories = document.getElementById('categories').value.split(',').map(c => c.trim()).filter(Boolean);
@@ -135,7 +138,11 @@
       let isoDate = null;
       if (dateStr) { const d = new Date(dateStr); if (!isNaN(d)) isoDate = d.toISOString(); }
 
-      const data = { id: id || null, matter: { title, draft, tags, categories, date: isoDate }, body };
+      const data = {
+        id: id || null,
+        matter: { title, description, draft, tags, categories, date: isoDate },
+        body
+      };
 
       const savedToken = localStorage.getItem('authToken');
       if (savedToken) {

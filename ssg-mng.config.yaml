@@ -7,6 +7,7 @@ content:
   markdown_dir: "_files/output/markdown"
   html_dir: "_files/output/public_html"
   title_max_len: 80
+  description_max_len: 300
   body_max_len: 30000
   tag_max_len: 16
   category_max_len: 16

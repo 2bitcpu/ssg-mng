@@ -26,12 +26,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MemberSignupResponse'
+              example:
+                account: "user123"
+                email: "user@example.com"
         '400':
           description: Validation error
         '409':
           description: Account already exists
-
-
 
   /service/manage/auth/signin:
     post:
@@ -54,8 +55,6 @@ paths:
         '401':
           description: Unauthorized
 
-
-
   /service/manage/auth/signout:
     get:
       summary: Member signout (GET)
@@ -76,8 +75,6 @@ paths:
         '200':
           description: Successfully signed out
 
-
-
   /service/manage/content:
     post:
       summary: Create a new content
@@ -93,6 +90,7 @@ paths:
               id: null
               matter:
                 title: "はじめての記事"
+                description: "記事の概要"
                 date: "2025-09-29T08:00:00Z"
                 draft: false
                 tags: ["Rust", "Axum"]
@@ -105,6 +103,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ContentDto'
+              example:
+                id: "xxxxxxxx-uuid-1234-5678-xxxxxxxxxxxx"
+                matter:
+                  title: "はじめての記事"
+                  description: "記事の概要"
+                  date: "2025-09-29T08:00:00Z"
+                  draft: false
+                  tags: ["Rust", "Axum"]
+                  categories: ["プログラミング", "チュートリアル"]
+                body: "ここに記事本文を記載します。"
         '400':
           description: Validation error
         '401':
@@ -126,6 +134,7 @@ paths:
               id: "xxxxxxxx-uuid-1234-5678-xxxxxxxxxxxx"
               matter:
                 title: "編集後の記事タイトル"
+                description: "編集後の記事の概要"
                 date: "2025-09-29T08:00:00Z"
                 draft: false
                 tags: ["Rust", "Axum"]
@@ -142,6 +151,7 @@ paths:
                 id: "abc123"
                 matter:
                   title: "編集後の記事タイトル"
+                  description: "編集後の記事の概要"
                   date: "2025-09-29T08:00:00Z"
                   draft: false
                   tags: ["Rust", "Axum"]
@@ -520,6 +530,10 @@ components:
           type: string
           nullable: true
           example: "はじめての記事"
+        description:
+          type: string
+          nullable: true
+          example: "記事の概要"
         date:
           type: string
           format: date-time
@@ -594,6 +608,9 @@ components:
         title:
           type: string
           example: "はじめての記事"
+        description:
+          type: string
+          example: "記事の概要"
         draft:
           type: boolean
           example: false
@@ -616,9 +633,6 @@ components:
           example: "bcb35610-23b6-4de7-9f53-cf87ef9fcd1f"
         matter:
           $ref: '#/components/schemas/SearchFrontMatterDto'
-        description:
-          type: string
-          example: "ここに記事本文を記載します。"
 
     SearchResponseDto:
       type: object

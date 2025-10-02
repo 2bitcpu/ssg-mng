@@ -139,6 +139,6 @@ docker run --rm -it --mount type=bind,source="$(pwd)",target=/project -w /projec
 
 ### swagger-ui
 ```
-docker run --rm -d -p 8080:8080 -e API_URL=openapi.yaml --name swagger-ui -v "$(pwd)"/openapi.yaml:/usr/share/nginx/html/openapi.yaml swaggerapi/swagger-ui 
+docker run --rm -d -p 8080:8080 -e API_URL=openapi.yaml --name swagger-ui -v "$(pwd)"/swagger/openapi.yaml:/usr/share/nginx/html/openapi.yaml swaggerapi/swagger-ui 
 ```
 ```swagger-ui``` からリクエストを投げる場合、CORSに ```http://localhost:8080``` を設定する必要がある
