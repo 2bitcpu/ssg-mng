@@ -552,6 +552,7 @@ fn doc_to_entity(doc: &TantivyDocument, fields: &SchemaFields) -> ContentEntity 
         id: get_str(doc, fields.id),
         matter: FrontMatterEntity {
             title: get_str(doc, fields.title),
+            description: get_str(doc, fields.description),
             date: get_datetime(doc, fields.date),
             draft: get_bool(doc, fields.draft),
             tags: get_str_list(doc, fields.tags),
