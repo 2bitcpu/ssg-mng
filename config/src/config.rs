@@ -38,6 +38,7 @@ pub struct ContentConfig {
     pub template_content: String,   // default "content.html"
     pub template_index: String,     // default "index.html"
     pub template_list: String,      // default "list.html"
+    pub template_recent: String,    // default "recent.html"
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -90,6 +91,7 @@ impl Default for Config {
                 template_content: "content.html".to_string(),
                 template_index: "index.html".to_string(),
                 template_list: "list.html".to_string(),
+                template_recent: "recent.html".to_string(),
             },
             search: SearchConfig {
                 dictionary_dir: "data/dictionary".to_string(),
@@ -183,6 +185,7 @@ struct PartialContentConfig {
     template_content: Option<String>,
     template_index: Option<String>,
     template_list: Option<String>,
+    template_recent: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -233,6 +236,7 @@ impl Config {
             if let Some(v) = content.template_content { self.content.template_content = v; }
             if let Some(v) = content.template_index { self.content.template_index = v; }
             if let Some(v) = content.template_list { self.content.template_list = v; }
+            if let Some(v) = content.template_recent { self.content.template_recent = v; }
         }
         if let Some(search) = p.search {
             if let Some(v) = search.dictionary_dir { self.search.dictionary_dir = v; }
