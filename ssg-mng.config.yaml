@@ -17,6 +17,7 @@ content:
   template_content: "content.html"
   template_index: "index.html"
   template_list: "list.html"
+  template_recent: "recent.html"
 
 search:
   dictionary_dir: "_files/data/dictionary"
