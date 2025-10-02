@@ -26,6 +26,8 @@ impl ContentRepositoryImpl {
 #[async_trait]
 impl ContentRepository for ContentRepositoryImpl {
     async fn create(&self, entity: &ContentEntity) -> Result<ContentEntity, BoxError> {
+        tracing::debug!("create entity: {:?}", entity);
+
         let dir = self
             .output_path
             .join(entity.matter.date.format("%Y%m").to_string());

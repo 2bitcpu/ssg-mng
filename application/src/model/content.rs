@@ -8,6 +8,7 @@ use domain::model::content::{ContentEntity, FrontMatterEntity};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FrontMatterDto {
     pub title: Option<String>,
+    pub description: Option<String>,
     pub date: Option<DateTime<Utc>>,
     pub draft: Option<bool>,
     pub tags: Option<Vec<String>>,
@@ -18,6 +19,7 @@ impl FrontMatterDto {
     pub fn new() -> Self {
         Self {
             title: Some(String::new()),
+            description: Some(String::new()),
             date: Some(Utc::now()),
             draft: Some(true),
             tags: Some(Vec::new()),
@@ -28,6 +30,7 @@ impl FrontMatterDto {
     pub fn default(&self) -> Self {
         Self {
             title: self.title.clone().or_else(|| Some(String::new())),
+            description: self.description.clone().or_else(|| Some(String::new())),
             date: self.date.or_else(|| Some(Utc::now())),
             draft: self.draft.or(Some(true)),
             tags: self.tags.clone().or_else(|| Some(Vec::new())),
@@ -40,6 +43,7 @@ impl From<FrontMatterDto> for FrontMatterEntity {
     fn from(dto: FrontMatterDto) -> Self {
         Self {
             title: dto.title.unwrap_or_default(),
+            description: dto.description,
             date: dto.date.unwrap_or_else(Utc::now),
             draft: dto.draft.unwrap_or(true),
             tags: dto.tags.unwrap_or_default(),
@@ -52,6 +56,7 @@ impl From<FrontMatterEntity> for FrontMatterDto {
     fn from(entity: FrontMatterEntity) -> Self {
         Self {
             title: Some(entity.title),
+            description: entity.description,
             date: Some(entity.date),
             draft: Some(entity.draft),
             tags: Some(entity.tags),
@@ -144,6 +149,17 @@ impl From<ContentDto> for ContentEntity {
             id: dto.id.unwrap_or(Uuid::new_v4().to_string()),
             matter: FrontMatterEntity {
                 title: normalize_text(fm.title, CONFIG.content.title_max_len, true),
+                description: match fm.description {
+                    Some(d) => {
+                        let txt = normalize_text(Some(d), CONFIG.content.description_max_len, true);
+                        if txt.trim().is_empty() {
+                            None
+                        } else {
+                            Some(txt)
+                        }
+                    }
+                    None => None,
+                },
                 date: fm.date.unwrap_or_else(Utc::now),
                 draft: fm.draft.unwrap_or(true),
                 tags: normalize_list(fm.tags, CONFIG.content.max_tags, CONFIG.content.tag_max_len),

@@ -31,6 +31,7 @@ use domain::{
 struct SchemaFields {
     pub id: Field,
     pub title: Field,
+    pub description: Field,
     pub body: Field,
     pub draft: Field,
     pub date: Field,
@@ -100,6 +101,7 @@ impl SearchEngineRepositoryImpl {
 
         let _ = builder.add_text_field("id", full_match_sort.clone());
         let _ = builder.add_text_field("title", token_match.clone());
+        let _ = builder.add_text_field("description", token_match.clone());
         let _ = builder.add_text_field("body", token_match.clone());
         let _ = builder.add_bool_field("draft", STORED | INDEXED);
         let _ = builder.add_date_field("date", STORED | INDEXED | FAST);
@@ -141,6 +143,7 @@ impl SearchEngineRepositoryImpl {
         Ok(SchemaFields {
             id: schema.get_field("id")?,
             title: schema.get_field("title")?,
+            description: schema.get_field("description")?,
             body: schema.get_field("body")?,
             draft: schema.get_field("draft")?,
             date: schema.get_field("date")?,
@@ -160,8 +163,10 @@ impl SearchEngineRepositoryImpl {
                 .split_ascii_whitespace()
                 .collect::<Vec<_>>()
                 .join(" ");
-            let parser =
-                QueryParser::for_index(&self.index, vec![self.fields.title, self.fields.body]);
+            let parser = QueryParser::for_index(
+                &self.index,
+                vec![self.fields.title, self.fields.description, self.fields.body],
+            );
             let query = parser.parse_query(&normalize)?;
             queries.push((Occur::Must, query));
         }
@@ -353,6 +358,7 @@ impl SearchEngineRepositoryImpl {
         let mut doc = doc!(
             self.fields.id => params.id.to_string(),
             self.fields.title => params.matter.title,
+            self.fields.description => params.matter.description.clone().unwrap_or_default(),
             self.fields.body => params.body,
             self.fields.date => tantivy::DateTime::from_timestamp_secs(params.matter.date.timestamp()),
             self.fields.draft => params.matter.draft,
@@ -498,7 +504,7 @@ impl SearchEngineRepository for SearchEngineRepositoryImpl {
     }
 
     async fn search(&self, params: &SearchParams) -> Result<SearchResult, BoxError> {
-        tracing::debug!("search params: {:#?}", params);
+        tracing::debug!("search params: {:?}", params);
 
         let query = self.build_query(&params)?;
 
@@ -549,6 +555,7 @@ fn doc_to_entity(doc: &TantivyDocument, fields: &SchemaFields) -> ContentEntity 
         id: get_str(doc, fields.id),
         matter: FrontMatterEntity {
             title: get_str(doc, fields.title),
+            description: Some(get_str(doc, fields.description)),
             date: get_datetime(doc, fields.date),
             draft: get_bool(doc, fields.draft),
             tags: get_str_list(doc, fields.tags),

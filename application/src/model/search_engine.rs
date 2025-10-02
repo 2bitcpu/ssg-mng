@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use config::CONFIG;
 use domain::model::{
-    content::{ContentEntity, FrontMatterEntity},
+    content::ContentEntity,
     search_engine::{SearchParams, SearchResult},
 };
 
@@ -11,6 +12,7 @@ use domain::model::{
 pub struct SearchFrontMatterDto {
     pub date: DateTime<Utc>,
     pub title: String,
+    pub description: String,
     pub draft: bool,
     pub tags: Vec<String>,
     pub categories: Vec<String>,
@@ -21,7 +23,6 @@ pub struct SearchFrontMatterDto {
 pub struct SearchContentDto {
     pub id: String,
     pub matter: SearchFrontMatterDto,
-    pub description: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -83,29 +84,37 @@ impl From<SearchQueryDto> for SearchParams {
     }
 }
 
-impl From<FrontMatterEntity> for SearchFrontMatterDto {
-    fn from(entity: FrontMatterEntity) -> Self {
-        Self {
-            date: entity.date,
-            title: entity.title,
-            draft: entity.draft,
-            tags: entity.tags,
-            categories: entity.categories,
-        }
-    }
-}
-
 impl From<ContentEntity> for SearchContentDto {
     fn from(entity: ContentEntity) -> Self {
-        let description = if entity.body.chars().count() > 100 {
-            entity.body.chars().take(99).collect::<String>() + "…"
-        } else {
-            entity.body
-        };
+        let description = entity
+            .matter
+            .description
+            .as_ref()
+            .map(|d| d.trim())
+            .filter(|d| !d.is_empty())
+            .map(|d| d.to_string())
+            .unwrap_or_else(|| {
+                let body = &entity.body;
+                if body.chars().count() > CONFIG.content.description_max_len {
+                    body.chars()
+                        .take(CONFIG.content.description_max_len - 1)
+                        .collect::<String>()
+                        + "…"
+                } else {
+                    body.clone()
+                }
+            });
+
         Self {
             id: entity.id,
-            matter: entity.matter.into(),
-            description,
+            matter: SearchFrontMatterDto {
+                date: entity.matter.date,
+                title: entity.matter.title,
+                description,
+                draft: entity.matter.draft,
+                tags: entity.matter.tags,
+                categories: entity.matter.categories,
+            },
         }
     }
 }

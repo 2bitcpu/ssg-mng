@@ -283,9 +283,9 @@
           card.appendChild(meta);
 
           // description (safe)
-          if (item.description) {
+          if (item.matter && item.matter.description) {
             const p = document.createElement('p');
-            p.textContent = String(item.description);
+            p.textContent = String(item.matter.description);
             card.appendChild(p);
           }
 

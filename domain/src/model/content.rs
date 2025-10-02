@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct FrontMatterEntity {
     pub date: DateTime<Utc>,
     pub title: String,
+    pub description: Option<String>,
     pub draft: bool,
     pub tags: Vec<String>,
     pub categories: Vec<String>,

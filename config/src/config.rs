@@ -25,18 +25,19 @@ pub struct ServerConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ContentConfig {
-    pub markdown_dir: String,     // default "output/markdown"
-    pub html_dir: String,         // default "output/public_html"
-    pub title_max_len: usize,     // default 80 (80〜240) clamp
-    pub body_max_len: usize,      // default 5000 (1000〜30000) clamp
-    pub tag_max_len: usize,       // default 16 (8〜32) clamp
-    pub category_max_len: usize,  // default 16 (8〜32) clamp
-    pub max_tags: usize,          // default 6 (1〜100) clamp
-    pub max_categories: usize,    // default 3 (1〜5) clamp
-    pub template_dir: String,     // default "data/templates"
-    pub template_content: String, // default "content.html"
-    pub template_index: String,   // default "index.html"
-    pub template_list: String,    // default "list.html"
+    pub markdown_dir: String,       // default "output/markdown"
+    pub html_dir: String,           // default "output/public_html"
+    pub title_max_len: usize,       // default 80 (80〜240) clamp
+    pub description_max_len: usize, // default 300 (100〜1000) clamp
+    pub body_max_len: usize,        // default 5000 (1000〜30000) clamp
+    pub tag_max_len: usize,         // default 16 (8〜32) clamp
+    pub category_max_len: usize,    // default 16 (8〜32) clamp
+    pub max_tags: usize,            // default 6 (1〜100) clamp
+    pub max_categories: usize,      // default 3 (1〜5) clamp
+    pub template_dir: String,       // default "data/templates"
+    pub template_content: String,   // default "content.html"
+    pub template_index: String,     // default "index.html"
+    pub template_list: String,      // default "list.html"
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -79,6 +80,7 @@ impl Default for Config {
                 markdown_dir: "output/markdown".to_string(),
                 html_dir: "output/public_html".to_string(),
                 title_max_len: 80,
+                description_max_len: 300,
                 body_max_len: 5000,
                 tag_max_len: 16,
                 category_max_len: 16,
@@ -171,6 +173,7 @@ struct PartialContentConfig {
     markdown_dir: Option<String>,
     html_dir: Option<String>,
     title_max_len: Option<usize>,
+    description_max_len: Option<usize>,
     body_max_len: Option<usize>,
     tag_max_len: Option<usize>,
     category_max_len: Option<usize>,
@@ -220,6 +223,7 @@ impl Config {
             if let Some(v) = content.markdown_dir { self.content.markdown_dir = v; }
             if let Some(v) = content.html_dir { self.content.html_dir = v; }
             if let Some(v) = content.title_max_len { self.content.title_max_len = v; }
+            if let Some(v) = content.description_max_len { self.content.description_max_len = v; }
             if let Some(v) = content.body_max_len { self.content.body_max_len = v; }
             if let Some(v) = content.tag_max_len { self.content.tag_max_len = v; }
             if let Some(v) = content.category_max_len { self.content.category_max_len = v; }
@@ -304,6 +308,19 @@ impl Config {
                 tt_old, tt_new
             );
             self.content.title_max_len = tt_new;
+        }
+
+        // description
+        let (ds_old, ds_new) = (
+            self.content.description_max_len,
+            clamp_usize(self.content.description_max_len, 100, 1000),
+        );
+        if ds_old != ds_new {
+            eprintln!(
+                "description_max_len {} is out of range [100,1000], rounded to {}.",
+                ds_old, ds_new
+            );
+            self.content.description_max_len = ds_new;
         }
 
         // body

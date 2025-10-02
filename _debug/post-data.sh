@@ -127,6 +127,7 @@ generate_post_data() {
 {
   "matter": {
     "title": "$article_title",
+    "description": "$article_title の概要です。", 
     "date": "$dynamic_date",
     "draft": $draft_status,
     "tags": $tags,
