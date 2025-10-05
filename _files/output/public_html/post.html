@@ -2,12 +2,42 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>コンテンツ投稿テスト</title>
-  <link rel="stylesheet" href="css/post.css?8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>コンテンツ投稿テスト (Markdown + Image)</title>
+  <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+    }
+
+    label {
+      display: block;
+      margin: 0.5rem 0;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 0.5rem;
+    }
+
+    .editor-preview img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0.5em 0;
+    }
+
+    dialog form label {
+      display: block;
+      margin: 0.5rem 0;
+    }
+  </style>
 </head>
 <body>
   <h1>コンテンツ投稿テスト</h1>
-  <!-- 投稿フォーム -->
   <form id="postForm">
     <label><strong>タイトル</strong> <input type="text" id="title"></label>
     <label><strong>概要</strong> <input type="text" id="description"></label>
@@ -16,7 +46,7 @@
     <label><strong>タグ</strong> <input type="text" id="tags" placeholder="カンマ区切り"></label>
     <label><strong>カテゴリ</strong> <input type="text" id="categories" placeholder="カンマ区切り"></label>
     <label><strong>本文</strong> <textarea id="body"></textarea></label>
-    <div class="button-row" style="display:flex;gap:8px;">
+    <div class="button-row">
       <button type="button" id="send-btn">送信</button>
       <button type="button" id="clear-btn" class="secondary">クリア</button>
     </div>
@@ -29,7 +59,7 @@
       <h2>Sign in</h2>
       <label><strong>account</strong> <input type="text" name="account" required /></label>
       <label><strong>password</strong> <input type="password" name="password" required /></label>
-      <div class="row" style="margin-top:8px">
+      <div style="margin-top:8px">
         <button type="submit">Sign in</button>
         <button type="button" id="loginCancel">Cancel</button>
       </div>
@@ -37,6 +67,7 @@
     </form>
   </dialog>
   <button id="loginBtn" style="position:fixed; top:8px; right:8px;">Sign in</button>
+  <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
   <script>
     // ------------------------
     // DOM Elements
@@ -48,44 +79,73 @@
     const form = document.getElementById('postForm');
 
     // ログイン関連
-    let authToken = null;
+    let authToken = localStorage.getItem('authToken') || null;
     const loginDialog = document.getElementById('loginDialog');
     const loginForm = document.getElementById('loginForm');
     const loginBtn = document.getElementById('loginBtn');
     const loginCancel = document.getElementById('loginCancel');
     const loginError = document.getElementById('loginError');
 
-    loginBtn.addEventListener('click', () => {
-      loginError.textContent = '';
-      loginDialog.showModal();
-    });
-    loginCancel.addEventListener('click', () => {
-      loginDialog.close();
-    });
+    loginBtn.addEventListener('click', () => { loginError.textContent = ''; loginDialog.showModal(); });
+    loginCancel.addEventListener('click', () => { loginDialog.close(); });
     loginForm.addEventListener('submit', async e => {
       e.preventDefault();
       loginError.textContent = '';
       const formData = new FormData(loginForm);
-      const body = {
-        account: formData.get('account'),
-        password: formData.get('password')
-      };
+      const body = { account: formData.get('account'), password: formData.get('password') };
       try {
         const resp = await fetch('/service/manage/auth/signin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const json = await resp.json();
         authToken = json.token;
         if (authToken) localStorage.setItem('authToken', authToken);
-
         loginDialog.close();
         alert('ログイン成功！');
-      } catch (err) {
-        loginError.textContent = 'ログイン失敗: ' + err;
-      }
+      } catch (err) { loginError.textContent = 'ログイン失敗: ' + err; }
+    });
+
+    // ------------------------
+    // EasyMDE 初期化
+    // ------------------------
+    const easyMDE = new EasyMDE({
+      element: document.getElementById('body'),
+      spellChecker: false,
+      imagePathAbsolute: true,
+      toolbar: [
+        "bold", "italic", "heading", "|", "quote",
+        {
+          name: "uploadImage",
+          action: function (editor) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/jpeg,image/png,image/gif';
+            input.onchange = async () => {
+              if (input.files.length === 0) return;
+              const file = input.files[0];
+              const formData = new FormData();
+              formData.append('image', file);
+              try {
+                const res = await fetch('/service/manage/image/upload', {
+                  method: 'POST',
+                  headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {},
+                  body: formData
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data.default) throw new Error('アップロード結果が不正です');
+                editor.codemirror.replaceSelection(`![](${data.default})`);
+              } catch (err) {
+                alert('画像アップロード失敗: ' + err.message);
+              }
+            };
+            input.click();
+          },
+          className: "fa fa-image",
+          title: "画像アップロード"
+        }
+      ]
     });
 
     // ------------------------
@@ -96,32 +156,22 @@
 
     // 編集時：既存データ取得
     if (id) {
-      const savedToken = localStorage.getItem('authToken');
-      if (savedToken) {
-        authToken = savedToken;
-      }
-
       fetch(`/service/manage/content/${id}`, {
-        headers: {
-          ...(authToken ? { Authorization: 'Bearer ' + authToken } : {})
+        headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}
+      }).then(r => r.json()).then(data => {
+        if (!data) return;
+        document.getElementById('title').value = data.matter?.title || '';
+        document.getElementById('description').value = data.matter?.description || '';
+        document.getElementById('draft').checked = data.matter?.draft || false;
+        document.getElementById('tags').value = (data.matter?.tags || []).join(',');
+        document.getElementById('categories').value = (data.matter?.categories || []).join(',');
+        easyMDE.value(data.body || '');
+        if (data.matter?.date) {
+          const d = new Date(data.matter.date);
+          const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+          document.getElementById('date').value = local.toISOString().slice(0, 16);
         }
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (!data) return;
-          document.getElementById('title').value = data.matter?.title || '';
-          document.getElementById('description').value = data.matter?.description || '';
-          document.getElementById('draft').checked = data.matter?.draft || false;
-          document.getElementById('tags').value = (data.matter?.tags || []).join(',');
-          document.getElementById('categories').value = (data.matter?.categories || []).join(',');
-          document.getElementById('body').value = data.body || '';
-          if (data.matter?.date) {
-            const d = new Date(data.matter.date);
-            const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-            document.getElementById('date').value = local.toISOString().slice(0, 16);
-          }
-        })
-        .catch(e => { console.error(e); alert('データ取得失敗'); });
+      }).catch(e => { console.error(e); alert('データ取得失敗'); });
     }
 
     // ------------------------
@@ -133,21 +183,12 @@
       const draft = document.getElementById('draft').checked;
       const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(Boolean);
       const categories = document.getElementById('categories').value.split(',').map(c => c.trim()).filter(Boolean);
-      const body = document.getElementById('body').value;
+      const body = easyMDE.value();
       const dateStr = document.getElementById('date').value;
       let isoDate = null;
       if (dateStr) { const d = new Date(dateStr); if (!isNaN(d)) isoDate = d.toISOString(); }
 
-      const data = {
-        id: id || null,
-        matter: { title, description, draft, tags, categories, date: isoDate },
-        body
-      };
-
-      const savedToken = localStorage.getItem('authToken');
-      if (savedToken) {
-        authToken = savedToken;
-      }
+      const data = { id: id || null, matter: { title, description, draft, tags, categories, date: isoDate }, body };
 
       output.textContent = '送信中...';
       try {
@@ -156,15 +197,13 @@
           method,
           headers: {
             'Content-Type': 'application/json',
-            ...(authToken ? { Authorization: 'Bearer ' + authToken } : {})
+            ...(authToken ? { 'Authorization': 'Bearer ' + authToken } : {})
           },
           body: JSON.stringify(data)
         });
         const resp = await res.json();
         output.textContent = JSON.stringify(resp, null, 2);
-      } catch (e) {
-        output.textContent = 'Error: ' + e;
-      }
+      } catch (e) { output.textContent = 'Error: ' + e; }
     });
 
     // ------------------------
@@ -174,6 +213,7 @@
       formFields.forEach(f => {
         const el = document.getElementById(f);
         if (el.type === 'checkbox') el.checked = false;
+        else if (f === 'body') easyMDE.value('');
         else el.value = '';
       });
       output.textContent = '';

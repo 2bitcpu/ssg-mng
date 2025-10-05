@@ -17,6 +17,8 @@ scraper.workspace = true
 tracing.workspace = true
 pulldown-cmark.workspace = true
 tera.workspace = true
+image.workspace = true
+uuid58.workspace = true
 
 common.workspace = true
 domain.workspace = true

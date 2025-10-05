@@ -12,6 +12,7 @@ pub struct Config {
     pub content: ContentConfig,
     pub search: SearchConfig,
     pub security: SecurityConfig,
+    pub image: ImageConfig,
     pub log: LogConfig,
 }
 
@@ -64,6 +65,20 @@ pub struct SecurityConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ImageResizeConfig {
+    pub size: u32,   // default 960; clamp 600〜4000 / default 180; clamp 60〜600
+    pub quality: u8, // default 85; clamp 30〜100 / default 75; clamp 30〜100
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ImageConfig {
+    pub output_dir: String, // default "output/public_html/images"
+    pub url_root: String,   // default "/images"
+    pub default: ImageResizeConfig,
+    pub thumb: ImageResizeConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LogConfig {
     pub level: Option<String>, // default None
 }
@@ -109,6 +124,18 @@ impl Default for Config {
                 lock_seconds: 60 * 60, // 1H
                 update_interval: 1,
                 allow_signup: false,
+            },
+            image: ImageConfig {
+                output_dir: "output/public_html/images".to_string(),
+                url_root: "/images".to_string(),
+                default: ImageResizeConfig {
+                    size: 960,
+                    quality: 85,
+                },
+                thumb: ImageResizeConfig {
+                    size: 180,
+                    quality: 75,
+                },
             },
             log: LogConfig { level: None },
         }
@@ -159,6 +186,7 @@ struct PartialConfig {
     content: Option<PartialContentConfig>,
     search: Option<PartialSearchConfig>,
     security: Option<PartialSecurityConfig>,
+    image: Option<PartialImageConfig>,
     log: Option<PartialLogConfig>,
 }
 
@@ -210,6 +238,20 @@ struct PartialSecurityConfig {
 }
 
 #[derive(Debug, Deserialize)]
+struct PartialImageResizeConfig {
+    size: Option<u32>,
+    quality: Option<u8>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PartialImageConfig {
+    output_dir: Option<String>,
+    url_root: Option<String>,
+    default: Option<PartialImageResizeConfig>,
+    thumb: Option<PartialImageResizeConfig>,
+}
+
+#[derive(Debug, Deserialize)]
 struct PartialLogConfig {
     level: Option<String>,
 }
@@ -254,6 +296,18 @@ impl Config {
             if let Some(v) = security.lock_seconds { self.security.lock_seconds = v; }
             if let Some(v) = security.update_interval { self.security.update_interval = v; }
             if let Some(v) = security.allow_signup { self.security.allow_signup = v; }
+        }
+        if let Some(image) = p.image {
+            if let Some(v) = image.output_dir { self.image.output_dir = v; }
+            if let Some(v) = image.url_root { self.image.url_root = v; }
+            if let Some(v) = image.default {
+                if let Some(v) = v.size { self.image.default.size = v; }
+                if let Some(v) = v.quality { self.image.default.quality = v; }
+            }
+            if let Some(v) = image.thumb {
+                if let Some(v) = v.size { self.image.thumb.size = v; }
+                if let Some(v) = v.quality { self.image.thumb.quality = v; }
+            }
         }
         if let Some(log) = p.log {
             if let Some(v) = log.level { self.log.level = Some(v); }
@@ -300,174 +354,37 @@ impl Config {
             }
         }
 
-        // Content
-        // title
-        let (tt_old, tt_new) = (
-            self.content.title_max_len,
-            clamp_usize(self.content.title_max_len, 80, 240),
-        );
-        if tt_old != tt_new {
-            eprintln!(
-                "title_max_len {} is out of range [80,160], rounded to {}.",
-                tt_old, tt_new
+        if !Path::new(&self.image.output_dir).is_dir() {
+            panic!(
+                "Configured image output directory '{}' does not exist.",
+                self.image.output_dir
             );
-            self.content.title_max_len = tt_new;
         }
 
-        // description
-        let (ds_old, ds_new) = (
-            self.content.description_max_len,
-            clamp_usize(self.content.description_max_len, 100, 1000),
-        );
-        if ds_old != ds_new {
-            eprintln!(
-                "description_max_len {} is out of range [100,1000], rounded to {}.",
-                ds_old, ds_new
-            );
-            self.content.description_max_len = ds_new;
-        }
+        self.content.title_max_len = self.content.title_max_len.clamp(80, 240);
+        self.content.description_max_len = self.content.description_max_len.clamp(100, 1000);
+        self.content.body_max_len = self.content.body_max_len.clamp(1000, 30000);
+        self.content.tag_max_len = self.content.tag_max_len.clamp(8, 32);
+        self.content.category_max_len = self.content.category_max_len.clamp(8, 32);
+        self.content.max_tags = self.content.max_tags.clamp(1, 100);
+        self.content.max_categories = self.content.max_categories.clamp(1, 5);
 
-        // body
-        let (bd_old, bd_new) = (
-            self.content.body_max_len,
-            clamp_usize(self.content.body_max_len, 1000, 30000),
-        );
-        if bd_old != bd_new {
-            eprintln!(
-                "body_max_len {} is out of range [100,5000], rounded to {}.",
-                bd_old, bd_new
-            );
-            self.content.body_max_len = bd_new;
-        }
+        self.search.index_limit = self.search.index_limit.clamp(100, 10_000);
+        self.search.search_limit = self.search.search_limit.clamp(100, 10_000);
+        self.search.memory_budget_in_bytes = self
+            .search
+            .memory_budget_in_bytes
+            .clamp(100_000_000, 99_999_999_9);
 
-        // tag
-        let (tg_old, tg_new) = (
-            self.content.tag_max_len,
-            clamp_usize(self.content.tag_max_len, 8, 32),
-        );
+        self.security.expire = self.security.expire.clamp(180, 60 * 60 * 24 * 90);
+        self.security.lock_threshold = self.security.lock_threshold.clamp(1, 10);
+        self.security.lock_seconds = self.security.lock_seconds.clamp(60, 60 * 60 * 24);
+        self.security.update_interval = self.security.update_interval.clamp(1, 60);
 
-        if tg_old != tg_new {
-            eprintln!(
-                "tag_max_len {} is out of range [8,32], rounded to {}.",
-                tg_old, tg_new
-            );
-            self.content.tag_max_len = tg_new;
-        }
-
-        // category
-        let (ct_old, ct_new) = (
-            self.content.category_max_len,
-            clamp_usize(self.content.category_max_len, 8, 32),
-        );
-        if ct_old != ct_new {
-            eprintln!(
-                "category_max_len {} is out of range [8,32], rounded to {}.",
-                ct_old, ct_new
-            );
-            self.content.category_max_len = ct_new;
-        }
-
-        // tag array size
-        let (tag_old, tag_new) = (
-            self.content.max_tags,
-            clamp_usize(self.content.max_tags, 1, 100),
-        );
-        if tag_old != tag_new {
-            eprintln!(
-                "max_tags {} is out of range [1,100], rounded to {}.",
-                tag_old, tag_new
-            );
-            self.content.max_tags = tag_new;
-        }
-
-        // categiory array size
-        let (cat_old, cat_new) = (
-            self.content.max_categories,
-            clamp_usize(self.content.max_categories, 1, 5),
-        );
-        if cat_old != cat_new {
-            eprintln!(
-                "max_categories {} is out of range [1,5], rounded to {}.",
-                cat_old, cat_new
-            );
-            self.content.max_categories = cat_new;
-        }
-
-        // index limit
-        let (il_old, il_new) = (
-            self.search.index_limit,
-            clamp_usize(self.search.index_limit, 100, 10_000),
-        );
-        if il_old != il_new {
-            eprintln!(
-                "index_limit {} out of range [100,10000], rounded to {}.",
-                il_old, il_new
-            );
-            self.search.index_limit = il_new;
-        }
-
-        // search limit
-        let (sl_old, sl_new) = (
-            self.search.search_limit,
-            clamp_usize(self.search.search_limit, 100, 10_000),
-        );
-        if sl_old != sl_new {
-            eprintln!(
-                "search_limit {} out of range [100,10000], rounded to {}.",
-                sl_old, sl_new
-            );
-            self.search.search_limit = sl_new;
-        }
-
-        // memory budget
-        let (mb_old, mb_new) = (
-            self.search.memory_budget_in_bytes,
-            clamp_usize(self.search.memory_budget_in_bytes, 10_000_000, 99_999_999),
-        );
-        if mb_old != mb_new {
-            eprintln!(
-                "memory_budget_in_bytes {} out of range [10000000,9999999], rounded to {}.",
-                mb_old, mb_new
-            );
-            self.search.memory_budget_in_bytes = mb_new;
-        }
-
-        // Security: expire clamp (180 ..= 90 days)
-        let expire_clamp = clamp_i64(self.security.expire, 180, 60 * 60 * 24 * 90);
-        if expire_clamp != self.security.expire {
-            eprintln!(
-                "security.expire {} is out of range [180,90days], rounded to {}.",
-                self.security.expire, expire_clamp
-            );
-            self.security.expire = expire_clamp;
-        }
-
-        let lock_threshold_clamp = clamp_i64(self.security.lock_threshold, 1, 10);
-        if lock_threshold_clamp != self.security.lock_threshold {
-            eprintln!(
-                "security.lock_threshold {} is out of range [1,10], rounded to {}.",
-                self.security.lock_threshold, lock_threshold_clamp
-            );
-            self.security.lock_threshold = lock_threshold_clamp;
-        }
-
-        let lock_seconds_clamp = clamp_i64(self.security.lock_seconds, 60, 60 * 60 * 24);
-        if lock_seconds_clamp != self.security.lock_seconds {
-            eprintln!(
-                "security.lock_seconds {} is out of range [60,1day], rounded to {}.",
-                self.security.lock_seconds, lock_seconds_clamp
-            );
-            self.security.lock_seconds = lock_seconds_clamp;
-        }
-
-        let update_interval_clamp = clamp_i64(self.security.update_interval, 1, 60);
-        if update_interval_clamp != self.security.update_interval {
-            eprintln!(
-                "security.update_interval {} is out of range [1,60], rounded to {}.",
-                self.security.update_interval, update_interval_clamp
-            );
-            self.security.update_interval = update_interval_clamp;
-        }
+        self.image.default.size = self.image.default.size.clamp(100, 4000);
+        self.image.default.quality = self.image.default.quality.clamp(30, 100);
+        self.image.thumb.size = self.image.thumb.size.clamp(60, 600);
+        self.image.thumb.quality = self.image.thumb.quality.clamp(30, 100);
     }
 
     /// Overwide from CLI
@@ -528,26 +445,6 @@ impl Config {
             .ok()
             .and_then(|path| path.file_stem().map(|s| s.to_string_lossy().to_string()))
             .unwrap_or_else(|| "unknown".to_string())
-    }
-}
-
-fn clamp_usize(v: usize, lo: usize, hi: usize) -> usize {
-    if v < lo {
-        lo
-    } else if v > hi {
-        hi
-    } else {
-        v
-    }
-}
-
-fn clamp_i64(v: i64, lo: i64, hi: i64) -> i64 {
-    if v < lo {
-        lo
-    } else if v > hi {
-        hi
-    } else {
-        v
     }
 }
 

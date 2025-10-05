@@ -1,5 +1,5 @@
 use crate::{
-    handler::{auth, content, public_handler},
+    handler::{auth, content, image_uploader, public_handler},
     middleware::auth::auth_guard,
 };
 use application::UseCaseModule;
@@ -27,6 +27,10 @@ pub fn create_router(usecases: Arc<dyn UseCaseModule>) -> Router {
         .route("/content/categories/{limit}", get(content::caregories))
         .layer(from_fn_with_state(usecases.clone(), auth_guard));
 
+    let upload_router = Router::new()
+        .route("/image/upload", post(image_uploader::upload))
+        .layer(from_fn_with_state(usecases.clone(), auth_guard));
+
     let mut auth_router = Router::new()
         .route("/auth/signin", post(auth::signin))
         .route("/auth/signout", any(auth::signout));
@@ -46,6 +50,7 @@ pub fn create_router(usecases: Arc<dyn UseCaseModule>) -> Router {
 
     let manage_router = Router::new()
         .nest("/manage", content_router)
+        .nest("/manage", upload_router)
         .nest("/manage", auth_router);
 
     let mut app = Router::new()
@@ -71,7 +76,7 @@ pub fn create_router(usecases: Arc<dyn UseCaseModule>) -> Router {
             );
         app = app.layer(cors);
     }
-    app = app.layer(DefaultBodyLimit::max(1024 * 1024));
+    app = app.layer(DefaultBodyLimit::max(1024 * 1024 * 5));
 
     if let Some(dir) = CONFIG.server.static_dir.as_ref() {
         app.fallback(get_service(ServeDir::new(dir)))

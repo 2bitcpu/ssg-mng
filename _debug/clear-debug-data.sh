@@ -7,6 +7,8 @@ PUBLIC_HTML="_files/output/public_html"
 MARKDOWN_DIR="_files/output/markdown"
 INDEX_DIR="_files/output/.index"
 USER_DIR="_files/data/security"
+IMAGE_DIR="_files/output/public_html/images"
+
 
 mkdir -p "$PUBLIC_HTML"
 
@@ -29,3 +31,6 @@ mkdir -p "$USER_DIR"
 mkdir -p "$DIC_DIR"
 
 mkdir -p "$TEMPLATES_HTML"
+
+rm -rf "$IMAGE_DIR"
+mkdir -p "$IMAGE_DIR"
