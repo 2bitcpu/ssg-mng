@@ -1,12 +1,14 @@
 use crate::repository::{
     content::ContentRepositoryImpl, html_parser::HtmlParserRepositoryImpl,
-    member::MemberRepositoryImpl, search_engine::SearchEngineRepositoryImpl,
+    image_uploader::ImageUploaderRepositoryImpl, member::MemberRepositoryImpl,
+    search_engine::SearchEngineRepositoryImpl,
 };
 use common::types::BoxError;
 use domain::{
     Repositories,
     repository::{
-        content::ContentRepository, html_parser::HtmlParserRepository, member::MemberRepository,
+        content::ContentRepository, html_parser::HtmlParserRepository,
+        image_uploader::ImageUploaderRepository, member::MemberRepository,
         search_engine::SearchEngineRepository,
     },
 };
@@ -17,6 +19,7 @@ pub struct RepositoriesImpl {
     parser_repo: HtmlParserRepositoryImpl,
     content_repo: ContentRepositoryImpl,
     member_repo: MemberRepositoryImpl,
+    image_uploader_repo: ImageUploaderRepositoryImpl,
 }
 
 impl RepositoriesImpl {
@@ -25,12 +28,14 @@ impl RepositoriesImpl {
         let parser_repo = HtmlParserRepositoryImpl::new();
         let content_repo = ContentRepositoryImpl::new();
         let member_repo = MemberRepositoryImpl::new()?;
+        let image_uploader_repo = ImageUploaderRepositoryImpl::new();
 
         Ok(Self {
             engine_repo,
             parser_repo,
             content_repo,
             member_repo,
+            image_uploader_repo,
         })
     }
 }
@@ -50,5 +55,9 @@ impl Repositories for RepositoriesImpl {
 
     fn member<'s>(&'s self) -> &'s dyn MemberRepository {
         &self.member_repo
+    }
+
+    fn image_uploader<'s>(&'s self) -> &'s dyn ImageUploaderRepository {
+        &self.image_uploader_repo
     }
 }

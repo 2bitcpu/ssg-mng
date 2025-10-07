@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use config::CONFIG;
 use domain::model::content::{ContentEntity, FrontMatterEntity};
@@ -75,7 +74,7 @@ pub struct ContentDto {
 impl ContentDto {
     pub fn new() -> Self {
         Self {
-            id: Some(Uuid::new_v4().to_string()),
+            id: Some(uuid58::new_string()),
             matter: Some(FrontMatterDto::new()),
             body: Some(String::new()),
         }
@@ -83,7 +82,7 @@ impl ContentDto {
 
     pub fn default(&self) -> Self {
         Self {
-            id: Some(self.id.clone().unwrap_or(Uuid::new_v4().to_string())),
+            id: Some(self.id.clone().unwrap_or(uuid58::new_string())),
             matter: Some(
                 self.matter
                     .as_ref()
@@ -146,7 +145,7 @@ impl From<ContentDto> for ContentEntity {
         }
 
         Self {
-            id: dto.id.unwrap_or(Uuid::new_v4().to_string()),
+            id: dto.id.unwrap_or(uuid58::new_string()),
             matter: FrontMatterEntity {
                 title: normalize_text(fm.title, CONFIG.content.title_max_len, true),
                 description: match fm.description {

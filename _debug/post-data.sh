@@ -3,10 +3,11 @@
 PWD=$(cd "$(dirname "$0")" && pwd)
 JH="$PWD/jwt-header.txt"
 CT="Content-Type: application/json"
-readonly URL="http://localhost:3000/service/manage/content"
+readonly HOST="http://localhost:3333"
+readonly URL="$HOST/service/manage/content"
 
-# curl -i -X POST -H "Content-Type: application/json" -d '{"account":"testuser","password":"P@55w0rd","confirmPassword":"P@55w0rd","email":"testuser@localhost"}' http://localhost:3000/service/manage/auth/signup
-SIGNIN_URL="http://localhost:3000/service/manage/auth/signin"
+# curl -i -X POST -H "Content-Type: application/json" -d '{"account":"testuser","password":"P@55w0rd","confirmPassword":"P@55w0rd","email":"testuser@localhost"}' "$HOST/service/manage/auth/signup"
+SIGNIN_URL="$HOST/service/manage/auth/signin"
 ACCOUNT="testuser"
 PASSWORD="P@55w0rd"
 

@@ -21,4 +21,4 @@ domain.workspace = true
 infrastructure.workspace = true
 async-argon2.workspace = true
 simple-jwt.workspace = true
-
+uuid58.workspace = true

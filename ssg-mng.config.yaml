@@ -19,6 +19,15 @@ content:
   template_list: "list.html"
   template_recent: "recent.html"
 
+image:
+  output_dir: "_files/output/public_html/images"
+  default:
+    size: 1280
+    quality: 85
+  thumb:
+    size: 240
+    quality: 75
+
 search:
   dictionary_dir: "_files/data/dictionary"
   index_dir: "_files/output/.index"
