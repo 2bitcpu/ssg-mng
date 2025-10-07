@@ -7,7 +7,9 @@ resolver = "2"
 members = [ "application", "common","config", "domain", "infrastructure", "presentation", "ssg-mng", "libs/async-argon2", "libs/simple-jwt" , "libs/uuid58"]
 
 [workspace.dependencies]
-lindera-tantivy = { git = "https://github.com/lindera/lindera-tantivy" }
+lindera = "1.3.2"
+tantivy = "0.25.0"
+lindera-tantivy = "1.0.3"
 argon2 = { version = "0.5.3", default-features = false, features = ["alloc", "password-hash", "std"] }
 async-trait = { version = "0.1.89", default-features = false }
 axum = { version = "0.8.4", features = ["macros", "multipart"] }
@@ -15,7 +17,6 @@ axum-extra = { version = "0.10.1", default-features = false, features = ["typed-
 chrono = { version = "0.4.42", default-features = false, features = ["serde", "now"] }
 clap = { version = "4.5.48", features = ["derive"] }
 jsonwebtoken = { version = "9.3.1", default-features = false }
-lindera = "1.2.0"
 once_cell = { version = "1.21.3", default-features = false, features = ["std"] }
 password-hash = { version = "0.5.0", default-features = false, features = ["getrandom"] }
 regex = "1.11.3"
@@ -23,7 +24,6 @@ scraper = "0.24.0"
 serde = { version = "1.0.227", default-features = false, features = ["derive"] }
 serde_json = { version = "1.0.145", default-features = false, features = ["std"] }
 serde_yaml = { version = "0.9.34", default-features = false }
-tantivy = "0.25.0"
 tempfile = "3.23.0"
 tera = { version = "1.20.0", default-features = false, features = ["chrono"] }
 tokio = { version = "1.47.1", default-features = false, features = ["macros", "rt-multi-thread", "signal", "fs"] }

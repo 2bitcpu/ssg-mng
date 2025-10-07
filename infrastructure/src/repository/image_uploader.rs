@@ -65,7 +65,7 @@ impl ImageUploaderRepository for ImageUploaderRepositoryImpl {
         // CPU バウンド部分は spawn_blocking
         let (id, yyyymm, main_bytes, thumb_bytes) = tokio::task::spawn_blocking(
             move || -> Result<(String, String, Vec<u8>, Vec<u8>), BoxError> {
-                let id = uuid58::new();
+                let id = uuid58::new_string();
                 let now = chrono::Utc::now();
                 let yyyymm = now.format("%Y%m").to_string();
 
